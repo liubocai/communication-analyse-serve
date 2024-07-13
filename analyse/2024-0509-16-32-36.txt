@@ -1,0 +1,2 @@
+lon: 114.350954, lat: 30.527572, height: 47.3, prtype: 地面
+lon: 114.359455, lat: 30.520218, height: 69.8, prtype: 地面

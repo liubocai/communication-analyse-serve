@@ -1,0 +1,2 @@
+lon: 114.365808, lat: 30.512916, height: 50.9, prtype: µÿ√Ê
+lon: 114.356646, lat: 30.51884, height: 161.0, prtype: ø’÷–

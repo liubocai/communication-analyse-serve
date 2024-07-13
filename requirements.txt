@@ -1,0 +1,6 @@
+pandas==1.5.3
+pyinstaller==6.4.0
+pytest==8.2.2
+traitlets==5.14.3
+Flask==3.0.0
+Flask-Cors==4.0.0
