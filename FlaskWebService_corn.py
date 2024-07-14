@@ -13,7 +13,6 @@ import atexit
 import socket
 import re
 from csvData import csvNodeAdd,csvNodeUpdate,csvNodeDelete,csvLinkAdd,csvLinkUpdate,csvLinkDelete
-
 app = Flask(__name__)
 CORS(app, resources=r'/*')
 
@@ -592,68 +591,69 @@ def extract_number(string):
         return match.group(1)
     else:
         return None
-
-
-@app.route('/csvNode', methods=['POST'])
+    
+    
+@app.route('/csvNode',methods=['POST'])
 def addNewNode():
-    category = request.args.get('category', '')  # 必须,节点类别
-    name = request.args.get('name', '')  # 必须，节点名字
-    imgName = request.args.get('imgName', '')  # 必须，节点图片名字
-    value = request.args.get('value', '')  # 必须，节点的值
+    category = request.args.get('category','')#必须,节点类别
+    name = request.args.get('name','')#必须，节点名字
+    imgName = request.args.get('imgName','')#必须，节点图片名字
+    value = request.args.get('value','')#必须，节点的值
 
-    msg = csvNodeAdd(category, name, imgName, value)
+
+    msg = csvNodeAdd(category,name,imgName,value)
     return msg
 
 
-# 根据name修改
-@app.route('/csvNode', methods=['PUT'])
+#根据name修改
+@app.route('/csvNode',methods=['PUT'])
 def updateNode():
-    name = request.args.get('name', '')  # 必须，节点名字
-    category = request.args.get('category', '')  # 非必须
-    newName = request.args.get('newName', '')  # 非必须，节点的新名字
-    imgName = request.args.get('imgName', '')  # 非必须
-    value = request.args.get('value', '')  # 非必须
-
-    msg = csvNodeUpdate(name, category, newName, imgName, value)
+    name = request.args.get('name','')#必须，节点名字
+    category = request.args.get('category','')#非必须
+    newName = request.args.get('newName','')#非必须，节点的新名字
+    imgName = request.args.get('imgName','')#非必须
+    value = request.args.get('value','')#非必须
+    
+    msg = csvNodeUpdate(name,category,newName,imgName,value)
     return msg
 
 
-# 根据name删除
-@app.route('/csvNode', methods=['DELETE'])
+#根据name删除
+@app.route('/csvNode',methods=['DELETE'])
 def deleteNode():
-    name = request.args.get('name', '')  # 必须，节点名字
-
+    name = request.args.get('name','')#必须，节点名字
+    
     msg = csvNodeDelete(name)
     return msg
 
 
-@app.route('/csvLink', methods=['POST'])
+@app.route('/csvLink',methods=['POST'])
 def addLink():
-    nodeFrom = request.args.get('nodeFrom', '')  # 必须，link的出发点
-    nodeTo = request.args.get('nodeTo', '')  # 必须，link的终止点
-
-    msg = csvLinkAdd(nodeFrom, nodeTo)
+    nodeFrom = request.args.get('nodeFrom','')#必须，link的出发点
+    nodeTo = request.args.get('nodeTo','')#必须，link的终止点
+    
+    msg = csvLinkAdd(nodeFrom,nodeTo)
     return msg
 
 
-@app.route('/csvLink', methods=['PUT'])
+@app.route('/csvLink',methods=['PUT'])
 def updateLink():
-    nodeFrom = request.args.get('nodeFrom', '')  # 必须
-    nodeTo = request.args.get('nodeTo', '')  # 必须
-
-    newNodeFrom = request.args.get('newNodeFrom', '')  # 和下面的参数二选一，否则返回error
-    newNodeTo = request.args.get('newNodeTo', '')  # 和上面的参数二选一，否则返回error
-
-    msg = csvLinkUpdate(nodeFrom, nodeTo, newNodeFrom, newNodeTo)
+    nodeFrom = request.args.get('nodeFrom','')#必须
+    nodeTo = request.args.get('nodeTo','')#必须
+    
+    newNodeFrom = request.args.get('newNodeFrom','')#和下面的参数二选一，否则返回error
+    newNodeTo = request.args.get('newNodeTo','')#和上面的参数二选一，否则返回error
+    
+    msg = csvLinkUpdate(nodeFrom,nodeTo,newNodeFrom,newNodeTo)
     return msg
 
 
-@app.route('/csvLink', methods=['DELETE'])
+@app.route('/csvLink',methods=['DELETE'])
 def deleteLink():
-    nodeFrom = request.args.get('nodeFrom', '')  # 必须
-    nodeTo = request.args.get('nodeTo', '')  # 必须
-
-    msg = csvLinkDelete(nodeFrom, nodeTo)
+    nodeFrom = request.args.get('nodeFrom','')#必须
+    nodeTo = request.args.get('nodeTo','')#必须
+    
+    msg = csvLinkDelete(nodeFrom,nodeTo)
     return msg
 
 

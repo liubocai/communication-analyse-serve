@@ -762,36 +762,49 @@ def pso(radioposs,Y, bounds, num_particles, max_iter, w, c1, c2,h_uav,h_ground,n
 
 
 if __name__ == '__main__':
+    dsm = gdal.Open(r'C:\workspace\lbc\自组网通导遥群智时空动态优化\RDDPG_anet\map\dsmwithbuildFromEx2_blabel - 副本.tif')
+
+    fdsm = dsm.GetRasterBand(1).ReadAsArray(0,0,500,500)
+    fdsm[fdsm==255] = 0
+
+    def save_as_tif(data, save_path, file_name):
+        driver = gdal.GetDriverByName('GTiff')
+        dataset = driver.Create(save_path + file_name, data.shape[1], data.shape[0], 1, gdal.GDT_Float32)
+        dataset.GetRasterBand(1).WriteArray(data)
+        dataset.FlushCache()
+        dataset = Nonedata = np.array([[1, 2], [3, 4]])
 
 
+    save_as_tif(fdsm, r'C:/workspace/lbc/自组网通导遥群智时空动态优化/RDDPG_anet/map/', 'newtree.tif')
+    print(fdsm)
 
 #     import matplotlib
 #     matplotlib.use('agg')
 #     tifFilePath = r"C:\workspace\lbc\txc\0226\数据\guangxi_guilin_dsmCGCS2k.tif"
 #     tifFilePath = r"C:\workspace\cesiumChooseDot\server\data\wuhan_dsm_114_dsmCGCS2k_30.tif"
-    tifFilePath = r"C:\workspace\cesiumChooseDot\server\data\guangxi_guilin_dsmWGS84_5.tif"
-
-#     tifFilePath = r"C:\workspace\lbc\自组网通导遥群智时空动态优化\地理数据\DSM_XXXB.tif"
-#xlxs测试数据
-    # radioposs = [[110.46807629 , 25.27389282, 268], [110.56807629 , 25.37389282, 200]]
-    radioposs = [[114.3557052,30.5300442,16.9]]
-    # radioposs = [[110.193871,25.285245,125.86]] #418,566.52东2,798,003.86北
-#     # radioposs = [[110.46807629 , 25.27389282,
-    #     268    ], [110.43096165 , 25.3100568 , 242   ]    ]
-    st = time.time()
-
-    a = deploy(tifFilePath, radioposs)
-    m = [417910.37828443747, 2796838.3409542013]
-    # m = a.latlng2meter([114.3557052,30.5300442])
-    t = a.meter2latlng(m)
-    print(m)
-    print(t)
-    et = time.time()
-    print("读图用时：", et - st)
-    st = time.time()
-    a.main2(2000, 100)
-    et = time.time()
-    print("计算用时：", et - st)
+#     tifFilePath = r"C:\workspace\cesiumChooseDot\server\data\guangxi_guilin_dsmWGS84_5.tif"
+#
+# #     tifFilePath = r"C:\workspace\lbc\自组网通导遥群智时空动态优化\地理数据\DSM_XXXB.tif"
+# #xlxs测试数据
+#     # radioposs = [[110.46807629 , 25.27389282, 268], [110.56807629 , 25.37389282, 200]]
+#     radioposs = [[114.3557052,30.5300442,16.9]]
+#     # radioposs = [[110.193871,25.285245,125.86]] #418,566.52东2,798,003.86北
+# #     # radioposs = [[110.46807629 , 25.27389282,
+#     #     268    ], [110.43096165 , 25.3100568 , 242   ]    ]
+#     st = time.time()
+#
+#     a = deploy(tifFilePath, radioposs)
+#     m = [417910.37828443747, 2796838.3409542013]
+#     # m = a.latlng2meter([114.3557052,30.5300442])
+#     t = a.meter2latlng(m)
+#     print(m)
+#     print(t)
+#     et = time.time()
+#     print("读图用时：", et - st)
+#     st = time.time()
+#     a.main2(2000, 100)
+#     et = time.time()
+#     print("计算用时：", et - st)
 # p1 = np.array([200,300,100])
     # p2 = np.array([200,300,20])
     # dict = a.lineTemplates(600)
