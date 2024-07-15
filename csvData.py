@@ -1,8 +1,13 @@
 import csv
 import pandas as pd
- 
-nameListPath='nameList.csv'#修改为tomcat服务器上的csv文件
-linkListPath='linkList.csv'
+from configparser import ConfigParser
+
+# 创建解析器对象
+config = ConfigParser()
+# 读取配置文件
+config.read('config.ini')
+nameListPath = config.get('DEFAULT', 'nameListPath') #修改为tomcat服务器上的csv文件
+linkListPath = config.get('DEFAULT', 'linkListPath')
 
 
 def csvNodeAdd(category,name,imgName,value):
@@ -94,8 +99,10 @@ def csvLinkUpdate(nodeFrom,nodeTo,newNodeFrom,newNodeTo):
 def csvLinkDelete(nodeFrom,nodeTo):
     df = pd.read_csv(linkListPath,encoding='UTF-8',header=None)
     for i in range(len(df)):
-        if(df.iloc[i,0]==nodeFrom and df.iloc[i,1]==nodeTo):
+        if ((df.iloc[i, 0] == nodeFrom and df.iloc[i, 1] == nodeTo) or
+            (df.iloc[i, 0] == nodeTo and df.iloc[i, 1] == nodeFrom)):
             df.drop(i,inplace=True)
             break
     df.to_csv(linkListPath,encoding='UTF-8',mode='w',header=False,index=None)
     return 'success'
+
