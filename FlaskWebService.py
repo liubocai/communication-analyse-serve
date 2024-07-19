@@ -672,6 +672,7 @@ def Kmeans():
           clusters[label] = []
        clusters[label].append(positions[idx].tolist())
     return jsonify(clusters)
+
 if __name__ == '__main__':
     # 连接MongoDB
     client = MongoClient('mongodb://localhost:27017/?readPreference=primary&appname=MongoDB%20Compass&ssl=false')
