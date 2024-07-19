@@ -1,4 +1,4 @@
-from flask import Flask, Response
+from flask import Flask, Response, jsonify
 from flask import request
 import requests
 from pymongo import MongoClient
@@ -13,7 +13,7 @@ import atexit
 import socket
 import re
 from csvData import csvNodeAdd,csvNodeUpdate,csvNodeDelete,csvLinkAdd,csvLinkUpdate,csvLinkDelete
-
+from sklearn.cluster import KMeans
 app = Flask(__name__)
 CORS(app, resources=r'/*')
 
@@ -656,7 +656,22 @@ def deleteLink():
     msg = csvLinkDelete(nodeFrom, nodeTo)
     return msg
 
-
+@app.route('/Km', methods=['POST'])
+def Kmeans():
+    data = request.json.get('data', '')
+    K = int(request.json.get('K', ''))
+    print(data)
+    print(K)
+    positions = np.array(data, dtype=np.float64)
+    kmeans = KMeans(n_clusters=K)
+    kmeans.fit(positions)
+    clusters = {}
+    for idx, label in enumerate(kmeans.labels_):
+       label = int(label)
+       if label not in clusters:
+          clusters[label] = []
+       clusters[label].append(positions[idx].tolist())
+    return jsonify(clusters)
 if __name__ == '__main__':
     # 连接MongoDB
     client = MongoClient('mongodb://localhost:27017/?readPreference=primary&appname=MongoDB%20Compass&ssl=false')
@@ -665,6 +680,5 @@ if __name__ == '__main__':
     usr_collection = db['user']
     pjt_collection = db['project']
     img_collection = db['image']
-
     app.run(host="0.0.0.0", port=8092)
     # get_token()
