@@ -660,19 +660,41 @@ def deleteLink():
 def Kmeans():
     data = request.json.get('data', '')
     K = int(request.json.get('K', ''))
-    print(data)
-    print(K)
     positions = np.array(data, dtype=np.float64)
-    kmeans = KMeans(n_clusters=K)
-    kmeans.fit(positions)
+    n_init = 10
+    max_iter = 300
+    best_kmeans = None
+    min_inertia = float('inf')
+    for _ in range(n_init):
+        kmeans = KMeans(n_clusters=K, init='random', max_iter=max_iter, n_init=1)
+        kmeans.fit(positions)
+        inertia = kmeans.inertia_
+        if inertia < min_inertia:
+            min_inertia = inertia
+            best_kmeans = kmeans
     clusters = {}
-    for idx, label in enumerate(kmeans.labels_):
-       label = int(label)
-       if label not in clusters:
-          clusters[label] = []
-       clusters[label].append(positions[idx].tolist())
-    return jsonify(clusters)
-
+    for idx, label in enumerate(best_kmeans.labels_):
+        label = int(label)
+        if label not in clusters:
+            clusters[label] = []
+        clusters[label].append(positions[idx].tolist())
+    refined_clusters = {}
+    for label, cluster in clusters.items():
+        while len(cluster) > 100:
+            sub_kmeans = KMeans(n_clusters=2)
+            sub_kmeans.fit(np.array(cluster))
+            new_clusters = {}
+            for idx, sub_label in enumerate(sub_kmeans.labels_):
+                sub_label = int(sub_label)
+                if sub_label not in new_clusters:
+                    new_clusters[sub_label] = []
+                new_clusters[sub_label].append(cluster[idx])
+            cluster = new_clusters[0]
+            refined_clusters[len(refined_clusters)] = new_clusters[1]
+        refined_clusters[len(refined_clusters)] = cluster
+    final_clusters = [cluster for cluster in refined_clusters.values()]
+    
+    return jsonify(final_clusters)
 if __name__ == '__main__':
     # 连接MongoDB
     client = MongoClient('mongodb://localhost:27017/?readPreference=primary&appname=MongoDB%20Compass&ssl=false')
