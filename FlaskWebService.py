@@ -666,7 +666,7 @@ def Kmeans():
     best_kmeans = None
     min_inertia = float('inf')
     for _ in range(n_init):
-        kmeans = KMeans(n_clusters=K, init='random', max_iter=max_iter, n_init=1)
+        kmeans = KMeans(n_clusters=K, init='k-means++', max_iter=max_iter, n_init=1)
         kmeans.fit(positions)
         inertia = kmeans.inertia_
         if inertia < min_inertia:
