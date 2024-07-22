@@ -13,7 +13,8 @@ import atexit
 import socket
 import re
 from csvData import csvNodeAdd,csvNodeUpdate,csvNodeDelete,csvLinkAdd,csvLinkUpdate,csvLinkDelete
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, DBSCAN
+import traceback
 app = Flask(__name__)
 CORS(app, resources=r'/*')
 
@@ -655,7 +656,6 @@ def deleteLink():
 
     msg = csvLinkDelete(nodeFrom, nodeTo)
     return msg
-
 @app.route('/Km', methods=['POST'])
 def Kmeans():
     data = request.json.get('data', '')
@@ -678,23 +678,26 @@ def Kmeans():
         if label not in clusters:
             clusters[label] = []
         clusters[label].append(positions[idx].tolist())
-    refined_clusters = {}
-    for label, cluster in clusters.items():
-        while len(cluster) > 100:
-            sub_kmeans = KMeans(n_clusters=2)
-            sub_kmeans.fit(np.array(cluster))
-            new_clusters = {}
-            for idx, sub_label in enumerate(sub_kmeans.labels_):
-                sub_label = int(sub_label)
-                if sub_label not in new_clusters:
-                    new_clusters[sub_label] = []
-                new_clusters[sub_label].append(cluster[idx])
-            cluster = new_clusters[0]
-            refined_clusters[len(refined_clusters)] = new_clusters[1]
-        refined_clusters[len(refined_clusters)] = cluster
-    final_clusters = [cluster for cluster in refined_clusters.values()]
-    
-    return jsonify(final_clusters)
+    return jsonify(clusters)
+@app.route('/DBSCAN', methods=['POST'])
+def DBSCAN():
+    data = request.json.get('data', '')
+    eps = float(request.json.get('eps', ''))
+    min_samples = int(request.json.get('min_samples', ''))
+    print(eps, min_samples)
+    positions = np.array(data, dtype=np.float64)
+    db = DBSCAN(eps=eps, min_samples=min_samples)
+    db.fit(positions)
+    labels = db.labels_
+    clusters = {}
+    for idx, label in enumerate(labels):
+        label = int(label)
+        if label == -1:
+            continue
+        if label not in clusters:
+            clusters[label] = []
+        clusters[label].append(positions[idx].tolist())
+    return jsonify(clusters)
 if __name__ == '__main__':
     # 连接MongoDB
     client = MongoClient('mongodb://localhost:27017/?readPreference=primary&appname=MongoDB%20Compass&ssl=false')
