@@ -14,6 +14,15 @@ import socket
 import re
 from csvData import csvNodeAdd,csvNodeUpdate,csvNodeDelete,csvLinkAdd,csvLinkUpdate,csvLinkDelete
 from sklearn.cluster import KMeans, DBSCAN
+
+# from configparser import ConfigParser
+#
+# # 创建解析器对象
+# config = ConfigParser()
+# # 读取配置文件
+# config.read('config.ini')
+# radioip = config.get('DEFAULT', 'radioip')
+
 import traceback
 app = Flask(__name__)
 CORS(app, resources=r'/*')
@@ -379,7 +388,7 @@ def analysePlanRadio():
     maxGroundHeight = float(recvData['maxGroundHeight'])
     dis = int(recvData['samplePointInterval'])
     r = float(recvData['maxComputeRadioDistance'])
-    print(maxFlyNum,maxFlyHeight,maxGroundNum,maxGroundHeight)
+    # print(maxFlyNum,maxFlyHeight,maxGroundNum,maxGroundHeight)
     radioPos = []
     for i in range(len(recvRadiopos)):
         radioPos.append(
@@ -519,62 +528,89 @@ def analysePlanRadio():
 
 
 global_token = ""
-def get_token():
-    response = requests.get("http://192.168.5.61/api/wrtmng/1/user/login?username=admin&password=admin")
-    if response.status_code == 200:
-        res = json.loads(response.text)
-        if res["status"] == "success":
-            global global_token
-            global_token = res["result"]["token"]
-        else:
-            print({"code":501, "msg":"connect radio error"})
-            return 501
-    else:
-        print({"code":500, "msg":"server error"})
-        return 500
 
-# @app.before_first_request
-# def before_first_request():
-#     get_token()
+def get_token():
+    try:
+        response = requests.get(radioip+"/api/wrtmng/1/user/login?username=admin&password=admin")
+        if response.status_code == 200:
+            res = json.loads(response.text)
+            if res["status"] == "success":
+                global global_token
+                global_token = res["result"]["token"]
+            else:
+                print({"code":501, "msg":"connect radio error"})
+                return 501
+        else:
+            print({"code":500, "msg":"server error"})
+            return 500
+    except:
+        print("连接电台失败")
+
 
 @app.route('/testtcp2', methods=['GET'])
 def testtcp2():
     global global_token
-    print("old"+global_token)
     # token没有初始化
     if global_token == "" or global_token == None:
         code = get_token()
-        print("new" + global_token)
         if code == 500:
             return json.dumps({"code":500, "msg":"server error"})
         if code == 501:
             return json.dumps({"code":501, "msg":"connect radio error"})
 
-    url = "http://192.168.5.61/api/wrtmng/1/dev/status?&name=io.gnss&args=mesh&token=" + global_token
-    response = requests.get(url)
-    res = json.loads(response.text)
-
-    print(res)
-    #授权过期
-    if res["status"] == "error" and res["error"] == "Auth failed!":
-        code = get_token()
-        if code == 500:
-            return json.dumps({"code":500, "msg":"server error"})
-        if code == 501:
-            return json.dumps({"code":501, "msg":"connect radio error"})
-        url = "http://192.168.5.61/api/wrtmng/1/dev/status?&name=io.gnss&args=mesh&token=" + global_token
+    url = radioip+"/api/wrtmng/1/dev/status?&name=io.gnss&args=mesh&token=" + global_token
+    try:
         response = requests.get(url)
         res = json.loads(response.text)
-        print("new" + global_token)
-    #业务逻辑
-    poss = {} # {"ip":{"lon":lon,"lat":lat,"height":height}}
-    for device in res["result"]["status"]["devices"]:
-        pos = {}
-        pos['lon'] = float(extract_number(device['gnss']['longitude']))/100
-        pos['lat'] = float(extract_number(device['gnss']['latitude']))/100
-        pos['height'] = float(extract_number(device['gnss']['altitude']))
-        poss[device["ip"].split('/')[0]] = pos
-    return json.dumps(poss)
+
+        print(res)
+        #授权过期
+        if res["status"] == "error" and res["error"] == "Auth failed!":
+            code = get_token()
+            if code == 500:
+                # return json.dumps({"code":500, "msg":"server error"})
+                return json.dumps({})
+            if code == 501:
+                # return json.dumps({"code":501, "msg":"connect radio error"})
+                return json.dumps({})
+            url = radioip+"/api/wrtmng/1/dev/status?&name=io.gnss&args=mesh&token=" + global_token
+            response = requests.get(url)
+            res = json.loads(response.text)
+        #业务逻辑
+        poss = {} # {"ip":{"lon":lon,"lat":lat,"height":height}}
+        for device in res["result"]["status"]["devices"]:
+            pos = {}
+            pos['lon'] = float(extract_number(device['gnss']['longitude']))/100
+            pos['lat'] = float(extract_number(device['gnss']['latitude']))/100
+            pos['height'] = float(extract_number(device['gnss']['altitude']))
+            poss[device["ip"].split('/')[0]] = pos
+        return json.dumps(poss)
+    except:
+        return json.dumps({})
+    
+@app.route('/testtcp3', methods=['GET'])
+def testtcp3():
+    radioip="http://192.168.101.58"
+    url = radioip+"/status"
+    try:
+
+        response = requests.get(url,timeout=3)
+        res = json.loads(response.text)
+        #授权过期
+    
+        #业务逻辑
+        poss = {} # {"ip":{"lon":lon,"lat":lat,"height":height}}
+        for device in res["nodeInfos"]:
+            print(device)
+            pos = {}
+            pos['lon'] = round(float(device['longitude']),7)
+            pos['lat'] = round(float(device['latitude']),7)
+            pos['height'] = round(float(device['altitude']),2)
+            poss[device["ip"].split('/')[0]] = pos
+        return json.dumps(poss)
+    except:
+        return ({})
+
 
 def extract_fields(string, fields):
     results = {}
@@ -679,8 +715,9 @@ def Kmeans():
             clusters[label] = []
         clusters[label].append(positions[idx].tolist())
     return jsonify(clusters)
+
 @app.route('/DBSCAN', methods=['POST'])
-def DBSCAN():
+def DBSCAN_api():
     data = request.json.get('data', '')
     eps = float(request.json.get('eps', ''))
     min_samples = int(request.json.get('min_samples', ''))

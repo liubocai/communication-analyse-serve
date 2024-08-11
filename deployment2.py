@@ -10,13 +10,20 @@ import time
 
 from tqdm import *
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+from configparser import ConfigParser
 
+# 创建解析器对象
+config = ConfigParser()
+# 读取配置文件
+config.read('config.ini')
+radioip = config.get('DEFAULT', 'radioip')
+tifFileDir = config.get('DEFAULT', 'tifFileDir')
+resultFileDir = config.get('DEFAULT', 'resultFileDir')
 
 # 3屏电脑：D:/apache-tomcat-8.5.99/webapps/tiles
 outputTilesPath = 'D:/apache-tomcat-8.5.99/webapps/tiles'
 outputTifFileName = 'C:/workspace/cesiumChooseDot/server/output.tif'
-tifFileDir = "C:/workspace/cesiumChooseDot/server/data/"
-resultFileDir = "C:/workspace/cesiumChooseDot/server/analyse/"
+
 # 自己测试
 # outputTilesPath = 'C:/tools/apache-tomcat-8.5.82/webapps1/tiles'
 # outputTifFileName = 'C:/workspace/cesiumChooseDot/server/output.tif'
@@ -35,10 +42,10 @@ def select_indices(imin, imax, jmin, jmax, num_points):
 class deploy():
     #一张tif的大小为3000*4000左右的栅格，计算每个栅格的网速作为通信态势
     def __init__(self, tifname, radioposs):
-        # tifname = r"C:\workspace\cesiumChooseDot\server\data\guangxi_guilin_dsmWGS84_5.tif"
+        # tifname = r"C:\workspace\cesiumChooseDot\s
+        # erver\data\guangxi_guilin_dsmWGS84_5.tif"
 
         self.dsmPath = tifname
-        self.timemask = np.load('timesmask.npy')
         #读入tif
         dsm_gdal = gdal.Open(tifname)
         dsm_array = dsm_gdal.GetRasterBand(1).ReadAsArray()
@@ -520,7 +527,7 @@ class deploy():
     def drawResult(self, result, label):
         # displaying the image
         # cv2.imwrite("C:/workspace/cesiumChooseDot/server/resultimg_db/result_img0703.png", result)
-        cv2.imwrite("C:/workspace/cesiumChooseDot/server/resultimg_db/result_img"+ label + ".png", result)
+        cv2.imwrite(resultFileDir+"result_img"+ label + ".png", result)
 
     def drawColor(self, result):
         shape = result.shape
@@ -693,7 +700,7 @@ def pso(radioposs,Y, bounds, num_particles, max_iter, w, c1, c2,h_uav,h_ground,n
                         continue
                     #score = (40 - 0.05 * value[1]) * times
                     # rate = (40 - 0.05 * value[1]) * times
-                    print(value)
+
                     rate = (cmax - gamma * value)
                     if rate > 24 and times>0:
                         score_rate[i]+=rate
