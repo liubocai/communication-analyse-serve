@@ -8,10 +8,10 @@ import string
 import random
 from deployment2 import *
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 import atexit
-import socket
 import re
+import shutil
 from csvData import csvNodeAdd,csvNodeUpdate,csvNodeDelete,csvLinkAdd,csvLinkUpdate,csvLinkDelete
 from sklearn.cluster import KMeans, DBSCAN
 
@@ -23,7 +23,6 @@ from sklearn.cluster import KMeans, DBSCAN
 # config.read('config.ini')
 # radioip = config.get('DEFAULT', 'radioip')
 
-import traceback
 app = Flask(__name__)
 CORS(app, resources=r'/*')
 
@@ -336,7 +335,8 @@ def Get_ResImage(projectInviteCode):
     # 去对应的文件夹找到对应名字的图片
     # print(projectInviteCode)
     # img_code = projectInviteCode.split("_")[0]
-    with open(r'C:\workspace\cesiumChooseDot\server//resultimg_db//{}.png'.format(projectInviteCode), 'rb') as f:
+    with open(resultFileDir+projectInviteCode+'.png', 'rb') as f:
+    # with open(r'C:\workspace\cesiumChooseDot\server//resultimg_db//{}.png'.format(projectInviteCode), 'rb') as f:
         image = f.read()
         resp = Response(image, mimetype="image/png")
         return resp
@@ -355,14 +355,17 @@ def UploadRadioPos():
         tifName = recvData['tifname']
         dis = float(recvData['samplePointInterval'])
         r = int(recvData['maxComputeRadioDistance'])
+        # rAir = int(recvData['maxComputeRadioDistanceAir'])
+        # radioType = recvData['radioLinkTupu']
         tifFilePath = tifFileDir + tifName
         radioPos=[]
         for i in range(len(radioPosList)):
             radioPos.append([float(radioPosList[i]['lon']),float(radioPosList[i]['lat']),float(radioPosList[i]['height'])])
         print(radioPos)
-
         a = deploy(tifFilePath, radioPos)
         #检查计算的范围是否合理
+        # r = [rAir if item.startswith("无人机") else rGround for item in radioType]
+        # rentangles = a.main4(r, dis)
         rentangles = a.main2(r, dis)
         print("rentangles",rentangles)
         img_url = "http://127.0.0.1:8092/resultimages/result_img.png"
@@ -386,8 +389,13 @@ def analysePlanRadio():
     maxFlyHeight = float(recvData['maxFlyHeight'])
     maxGroundNum = int(recvData['maxGroundNum'])
     maxGroundHeight = float(recvData['maxGroundHeight'])
+
     dis = int(recvData['samplePointInterval'])
-    r = float(recvData['maxComputeRadioDistance'])
+    r = int(recvData['maxComputeRadioDistance'])
+    # rGround = int(recvData['maxComputeRadioDistance'])
+    # rAir = int(recvData['maxComputeRadioDistanceAir'])
+    # radioType = recvData['radioLinkTupu']
+    # r = [rAir if item.startswith("无人机") else rGround for item in radioType]
     # print(maxFlyNum,maxFlyHeight,maxGroundNum,maxGroundHeight)
     radioPos = []
     for i in range(len(recvRadiopos)):
@@ -478,10 +486,13 @@ def analysePlanRadio():
             planRadiosGround = np.vstack((planRadiosGround, result))
         result_all = np.vstack((result_all, planRadiosFly))
         result_all = np.vstack((result_all, planRadiosGround))
+        # r.extend([rAir]*planRadiosFly.shape[0])
+        # r.extend([rGround]*planRadiosGround.shape[0])
         result_all_final = result_all
         print("result_all_final", result_all_final)
         aaa = deploy(tifFilePath, list(result_all))
         rectangles = aaa.main2(r, dis)
+        # rectangles = aaa.main4(r, dis)
         find = True
 
     # 回传结果
@@ -531,7 +542,7 @@ global_token = ""
 
 def get_token():
     try:
-        response = requests.get(radioip+"/api/wrtmng/1/user/login?username=admin&password=admin")
+        response = requests.get(radioip+"/api/wrtmng/1/user/login?username=admin&password=zhzs2017")
         if response.status_code == 200:
             res = json.loads(response.text)
             if res["status"] == "success":
@@ -578,16 +589,39 @@ def testtcp2():
             res = json.loads(response.text)
         #业务逻辑
         poss = {} # {"ip":{"lon":lon,"lat":lat,"height":height}}
+        now = datetime.now(timezone.utc).replace(year=1900)
         for device in res["result"]["status"]["devices"]:
+            long = float(extract_number(device['gnss']['longitude']))
+            lati = float(extract_number(device['gnss']['latitude']))
+            if(lati == 0 or long == 0): #位置正确性判断
+                continue
+            date = device['gnss']['date']
+            if date != "":
+                date = datetime.strptime(date, "%m-%d %H:%M:%S.%f").replace(tzinfo=timezone.utc)
+                print("now", now)
+                print("date", date)
+                time_difference = abs((date - now).total_seconds())
+                print("time_difference", time_difference)
+
+                if time_difference > 10: #是否实时性判断
+                    continue
             pos = {}
-            pos['lon'] = float(extract_number(device['gnss']['longitude']))/100
-            pos['lat'] = float(extract_number(device['gnss']['latitude']))/100
+            pos['lon'] = convert_coordinate(long)
+            pos['lat'] = convert_coordinate(lati)
             pos['height'] = float(extract_number(device['gnss']['altitude']))
             poss[device["ip"].split('/')[0]] = pos
         return json.dumps(poss)
     except:
         return json.dumps({})
-    
+
+
+def convert_coordinate(coord):
+    coord /= 100
+    step1 = int(coord)
+    step2 = (coord - step1) * 100 / 60
+    result = step1+step2
+    return result
+
 @app.route('/testtcp3', methods=['GET'])
 def testtcp3():
     radioip="http://192.168.101.58"
@@ -606,6 +640,8 @@ def testtcp3():
             pos['lon'] = round(float(device['longitude']),7)
             pos['lat'] = round(float(device['latitude']),7)
             pos['height'] = round(float(device['altitude']),2)
+            if pos['lon'] == -180.0:
+                continue
             poss[device["ip"].split('/')[0]] = pos
         return json.dumps(poss)
     except:

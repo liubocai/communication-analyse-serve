@@ -1,14 +1,11 @@
 import math
-import shutil
 from osgeo import gdal
 from osgeo import osr
 import cv2
 import numpy as np
 import os
-
 import time
 
-from tqdm import *
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 from configparser import ConfigParser
 
@@ -140,7 +137,6 @@ class deploy():
 
     def meter2latlng(self, metercoor):
         # X,Y -> lon, lat
-
         prosrs = osr.SpatialReference()  # 空间参考，源数据是SpatialReference
         if "WGS84" in self.dsmPath:
             if "guilin" in self.dsmPath:
@@ -413,7 +409,6 @@ class deploy():
             #计算要参与的栅格的索引
             indices = select_indices(imin, imax, jmin, jmax, radiaArea)
             print("r",r, imin, imax, jmin, jmax, self.imgHeight, self.imgWidth)
-
             #开始计算
             st = time.time()
             result = np.array([self.GetLineNetSpeed(count, a, b, self.imgArray[a][b]) if self.imgArray[a][b] > 0 else 1000 for a, b in indices]).reshape(radiaArea, radiaArea)
@@ -425,6 +420,40 @@ class deploy():
             array_color = self.drawColor(result)
             self.drawResult(array_color, str(count))
         return rectangles
+
+    def main4(self, r=[9000], dis=30): #r改成列表，记录不同电台的不同计算范围
+        # r = 300 # 半径（m）要计算的电台通信覆盖范围的半径
+        # dis = r*2/radiaArea / self.imgCellHeight #目前是间隔的格子数，不是m，用户应该用米更好
+        rectangles = []
+        for count in range(len(self.radioposMeter)):
+            radiaArea = (int)(2 * r[count] / dis)
+            radiopixel = self.radioposGrid[count]
+            radioMeter = self.radioposMeter[count]
+            tempr = min([r[count], radioMeter[0] - self.imgLeftUpX, self.imgRightDownX - radioMeter[0], self.imgLeftUpY - radioMeter[1], radioMeter[1] - self.imgRightDownY])
+            imin = max(0, round(radiopixel[0] - tempr / self.imgCellHeight))
+            imax = min(self.imgHeight - 1, round(radiopixel[0] +tempr / self.imgCellHeight))
+            jmin = max(0, round(radiopixel[1] - tempr / self.imgCellWidth))
+            jmax = min(self.imgWidth - 1, round(radiopixel[1] + tempr / self.imgCellWidth))
+
+            #计算要放的矩形经纬度
+            west_south = self.grid2latlon(imax, jmin)
+            east_north = self.grid2latlon(imin, jmax)
+            rectangles.append(west_south+east_north)
+            #计算要参与的栅格的索引
+            indices = select_indices(imin, imax, jmin, jmax, radiaArea)
+            print("tempr",tempr, imin, imax, jmin, jmax, self.imgHeight, self.imgWidth)
+            #开始计算
+            st = time.time()
+            result = np.array([self.GetLineNetSpeed(count, a, b, self.imgArray[a][b]) if self.imgArray[a][b] > 0 else 1000 for a, b in indices]).reshape(radiaArea, radiaArea)
+            # result = np.array([self.GetLineNetSpeed(count, a, b, self.imgArray.ReadAsArray(a,b,1,1)) if self.imgArray.ReadAsArray(a,b,1,1) > 0 else 1000 for a, b in indices]).reshape(radiaArea, radiaArea)
+            #乘距离衰减倍率模型
+            result = np.clip((cmax - gamma * result), 0, cmax)
+            et = time.time()
+            print("网速用时：", et - st)
+            array_color = self.drawColor(result)
+            self.drawResult(array_color, str(count))
+        return rectangles
+
 
     def main3(self): #根据电台为中心生成多个图片
         radiaArea = 100

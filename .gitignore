@@ -25,6 +25,8 @@ pnpm-debug.log*
 /data
 /build
 *.tif
+*.tfw
+*.tif.aux.xml
 /resultimg_db/result_img6.png
 /resultimg_db/result_img7.png
 /resultimg_db/result_img8.png
